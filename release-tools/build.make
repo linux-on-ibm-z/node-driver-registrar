@@ -167,7 +167,7 @@ test-vendor:
 test: test-subtree
 test-subtree:
 	@ echo; echo "### $@:"
-	./release-tools/verify-subtree.sh release-tools
+#	./release-tools/verify-subtree.sh release-tools
 
 # Components can extend the set of directories which must pass shellcheck.
 # The default is to check only the release-tools directory itself.
