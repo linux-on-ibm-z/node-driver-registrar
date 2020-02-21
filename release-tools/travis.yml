@@ -14,7 +14,7 @@ before_script:
 - wget https://github.com/golang/dep/releases/download/v0.5.1/dep-linux-$(go env GOARCH) -O bin/dep
 - chmod u+x bin/dep
 - export PATH=$PWD/bin:$PATH
-- if [ "${arch}" == "s390x" ]; then
+- if [ "$TRAVIS_OS_NAME" = "linux" ]; then
         sudo apt-get -qq update && sudo apt install -y ghc cabal-install;
         sudo cabal update && sudo cabal install ShellCheck==0.6.0;
         export PATH=$HOME/.cabal/bin:$PATH;
