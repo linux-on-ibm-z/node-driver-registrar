@@ -51,7 +51,11 @@ IMAGE_TAGS+=$(shell git branch -r --points-at=HEAD | grep 'origin/release-' | gr
 IMAGE_TAGS+=$(shell tagged="$$(git describe --tags --match='v*' --abbrev=0)"; if [ "$$tagged" ] && [ "$$(git rev-list -n1 HEAD)" = "$$(git rev-list -n1 $$tagged)" ]; then echo $$tagged; fi)
 
 # Images are named after the command contained in them.
-IMAGE_NAME=$(REGISTRY_NAME)/$*
+ifeq ($(shell go env GOARCH), amd64)
+	IMAGE_NAME=$(REGISTRY_NAME)/$*
+else ifeq ($(shell go env GOARCH), s390x)
+	IMAGE_NAME=$(REGISTRY_NAME)/$*-s390x
+endif
 
 ifdef V
 # Adding "-alsologtostderr" assumes that all test binaries contain glog. This is not guaranteed.
@@ -169,7 +173,9 @@ test-subtree:
 # The default is to check only the release-tools directory itself.
 TEST_SHELLCHECK_DIRS=release-tools
 .PHONY: test-shellcheck
-test: test-shellcheck
+ifeq ($(shell go env GOARCH), amd64)
+	test: test-shellcheck
+endif
 test-shellcheck:
 	@ echo; echo "### $@:"
 	@ ret=0; \
