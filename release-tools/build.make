@@ -74,13 +74,14 @@ build-%: check-go-version-go
 	fi
 
 container-%: build-%
-	docker build -t $*:latest -f $(shell if [ -e ./cmd/$*/Dockerfile ]; then echo ./cmd/$*/Dockerfile; else echo Dockerfile; fi) --label revision=$(REV) .
-
+	export DOCKER_CLI_EXPERIMENTAL=enabled
+	docker run --rm --privileged linuxkit/binfmt:v0.7
+	docker buildx create --use --name multiarchimage-builder
+	
 push-%: container-%
 	set -ex; \
 	push_image () { \
-		docker tag $*:latest $(IMAGE_NAME):$$tag; \
-		docker push $(IMAGE_NAME):$$tag; \
+		docker buildx build --push -t $(IMAGE_NAME):$$tag --platform=linux/s390x,linux/amd64 -f $(shell if [ -e ./cmd/$*/Dockerfile ]; then echo ./cmd/$*/Dockerfile; else echo Dockerfile; fi) --label revision=$(REV) .; \
 	}; \
 	for tag in $(IMAGE_TAGS); do \
 		if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
