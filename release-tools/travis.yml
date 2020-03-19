@@ -21,6 +21,7 @@ before_script:
   fi
 script:
 - make -k all test GOFLAGS_VENDOR=$( [ -d vendor ] && echo '-mod=vendor' )
+- export DOCKER_CLI_EXPERIMENTAL=enabled # Added just for testing in travis not required in prow 
 after_success:
   - if [ "${TRAVIS_PULL_REQUEST}" == "false" ]; then
       docker login -u "${DOCKER_USERNAME}" -p "${DOCKER_PASSWORD}" quay.io;
