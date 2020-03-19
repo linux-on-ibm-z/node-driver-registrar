@@ -20,7 +20,7 @@
 
 # This is the default. It can be overridden in the main Makefile after
 # including build.make.
-REGISTRY_NAME=quay.io/k8scsi
+REGISTRY_NAME=gcr.io/k8s-staging-csi
 
 # Can be set to -mod=vendor to ensure that the "vendor" directory is used.
 GOFLAGS_VENDOR=
@@ -51,11 +51,7 @@ IMAGE_TAGS+=$(shell git branch -r --points-at=HEAD | grep 'origin/release-' | gr
 IMAGE_TAGS+=$(shell tagged="$$(git describe --tags --match='v*' --abbrev=0)"; if [ "$$tagged" ] && [ "$$(git rev-list -n1 HEAD)" = "$$(git rev-list -n1 $$tagged)" ]; then echo $$tagged; fi)
 
 # Images are named after the command contained in them.
-ifeq ($(shell go env GOARCH), amd64)
-	IMAGE_NAME=$(REGISTRY_NAME)/$*
-else ifeq ($(shell go env GOARCH), s390x)
-	IMAGE_NAME=$(REGISTRY_NAME)/$*-s390x
-endif
+IMAGE_NAME=$(REGISTRY_NAME)/$*
 
 ifdef V
 # Adding "-alsologtostderr" assumes that all test binaries contain glog. This is not guaranteed.
@@ -64,37 +60,48 @@ else
 TESTARGS =
 endif
 
-ARCH := $(if $(GOARCH),$(GOARCH),$(shell go env GOARCH))
-
 # Specific packages can be excluded from each of the tests below by setting the *_FILTER_CMD variables
 # to something like "| grep -v 'github.com/kubernetes-csi/project/pkg/foobar'". See usage below.
 
+# BUILD_PLATFORMS contains a set of <os> <arch> <suffix> triplets,
+# separated by semicolon. An empty variable or empty entry (= just a
+# semicolon) builds for the default platform of the current Go
+# toolchain.
+BUILD_PLATFORMS =
+
+# To enable experimental features on the Docker daemon
+export DOCKER_CLI_EXPERIMENTAL:=enabled
+
+# This builds each command (= the sub-directories of ./cmd) for the target platform(s)
+# defined by BUILD_PLATFORMS.
 build-%: check-go-version-go
 	mkdir -p bin
-	CGO_ENABLED=0 GOOS=linux go build $(GOFLAGS_VENDOR) -a -ldflags '-X main.version=$(REV) -extldflags "-static"' -o ./bin/$* ./cmd/$*
-	if [ "$$ARCH" = "amd64" ]; then \
-		CGO_ENABLED=0 GOOS=windows go build $(GOFLAGS_VENDOR) -a -ldflags '-X main.version=$(REV) -extldflags "-static"' -o ./bin/$*.exe ./cmd/$* ; \
-	fi
+	echo '$(BUILD_PLATFORMS)' | tr ';' '\n' | while read -r os arch suffix; do \
+		if ! (set -x; CGO_ENABLED=0 GOOS="$$os" GOARCH="$$arch" go build $(GOFLAGS_VENDOR) -a -ldflags '-X main.version=$(REV) -extldflags "-static"' -o "./bin/$*$$suffix" ./cmd/$*); then \
+			echo "Building $* for GOOS=$$os GOARCH=$$arch failed, see error(s) above."; \
+			exit 1; \
+		fi; \
+	done
 
+# build image locally 
 container-%: build-%
 	docker build -t $*:latest -f $(shell if [ -e ./cmd/$*/Dockerfile ]; then echo ./cmd/$*/Dockerfile; else echo Dockerfile; fi) --label revision=$(REV) .
 
-push-%: container-%
+# push multiarch image to staging area
+push-%: 
+	gcloud auth configure-docker
+	docker buildx create --use --name multiarchimage-builder
 	set -ex; \
-	push_image () { \
-		docker tag $*:latest $(IMAGE_NAME):$$tag; \
-		docker push $(IMAGE_NAME):$$tag; \
-	}; \
 	for tag in $(IMAGE_TAGS); do \
-		if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
-			: "creating or overwriting canary image"; \
-			push_image; \
-		elif docker pull $(IMAGE_NAME):$$tag 2>&1 | tee /dev/stderr | grep -q "manifest for $(IMAGE_NAME):$$tag not found"; then \
-			: "creating release image"; \
-			push_image; \
-		else \
-			: "release image $(IMAGE_NAME):$$tag already exists, skipping push"; \
-		fi; \
+                if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
+                        : "creating or overwriting canary image"; \
+                        docker buildx build --push -t $(IMAGE_NAME):$$tag --platform=linux/amd64,linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                elif docker pull $(IMAGE_NAME):$$tag 2>&1 | tee /dev/stderr | grep -q "manifest for $(IMAGE_NAME):$$tag not found"; then \
+                       : "creating release image"; \
+                        docker buildx build --push -t $(IMAGE_NAME):$$tag --platform=linux/amd64,linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                else \
+                        : "release image $(IMAGE_NAME):$$tag already exists, skipping push"; \
+                fi; \
 	done
 
 build: $(CMDS:%=build-%)
@@ -116,7 +123,7 @@ test-go:
 test: test-vet
 test-vet:
 	@ echo; echo "### $@:"
-	go test $(GOFLAGS_VENDOR) `go list $(GOFLAGS_VENDOR) ./... | grep -v vendor $(TEST_VET_FILTER_CMD)`
+	go vet $(GOFLAGS_VENDOR) `go list $(GOFLAGS_VENDOR) ./... | grep -v vendor $(TEST_VET_FILTER_CMD)`
 
 .PHONY: test-fmt
 test: test-fmt
@@ -167,7 +174,7 @@ test-vendor:
 test: test-subtree
 test-subtree:
 	@ echo; echo "### $@:"
-#	./release-tools/verify-subtree.sh release-tools
+	./release-tools/verify-subtree.sh release-tools
 
 # Components can extend the set of directories which must pass shellcheck.
 # The default is to check only the release-tools directory itself.
