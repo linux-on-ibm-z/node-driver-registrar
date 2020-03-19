@@ -89,7 +89,7 @@ container-%: build-%
 
 # push multiarch image to staging area
 push-%: 
-	gcloud auth configure-docker
+#	gcloud auth configure-docker # commenting for testing
 	docker buildx create --use --name multiarchimage-builder
 	set -ex; \
 	for tag in $(IMAGE_TAGS); do \
