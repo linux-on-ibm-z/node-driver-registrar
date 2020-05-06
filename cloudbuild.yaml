@@ -17,7 +17,12 @@ steps:
     args:
     - '-c'
     - |
-      export DOCKER_CLI_EXPERIMENTAL=enabled \
+      git clone 'https://github.com/kubernetes-csi/node-driver-registrar' tmp \
+      && git -C tmp fetch origin "$COMMIT_SHA" \
+      && git -C tmp checkout -qf FETCH_HEAD \
+      && mv tmp/.git .git \
+      && rm -rf tmp \
+      && export DOCKER_CLI_EXPERIMENTAL=enabled \
       && gcloud auth configure-docker \
       && docker buildx create --use --name multiarchimage-builder \
       && docker buildx build --push -t gcr.io/$_STAGING_PROJECT/csi-node-driver-registrar:amd64-linux-$_GIT_TAG --platform=linux/amd64 -f Dockerfile.multiarch . \
