@@ -12,7 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: build-% build container-% container push-% push clean test
+# Added push-multiarch to build and push multiarch image using docker buildx --push option 
+.PHONY: build-% build container-% container push-% push push-multiarch-% push-multiarch clean test
 
 # A space-separated list of all commands in the repository, must be
 # set in main Makefile of a repository.
@@ -52,6 +53,7 @@ IMAGE_TAGS+=$(shell tagged="$$(git describe --tags --match='v*' --abbrev=0)"; if
 
 # Images are named after the command contained in them.
 IMAGE_NAME=$(REGISTRY_NAME)/$*
+MULTI_IMAGE_NAME=gcr.io/k8s-staging-csi/$*
 
 ifdef V
 # Adding "-alsologtostderr" assumes that all test binaries contain glog. This is not guaranteed.
@@ -68,6 +70,9 @@ endif
 # semicolon) builds for the default platform of the current Go
 # toolchain.
 BUILD_PLATFORMS =
+
+# To enable experimental features on the Docker daemon
+export DOCKER_CLI_EXPERIMENTAL:=enabled
 
 # This builds each command (= the sub-directories of ./cmd) for the target platform(s)
 # defined by BUILD_PLATFORMS.
@@ -101,9 +106,25 @@ push-%: container-%
 		fi; \
 	done
 
+push-multiarch-%:
+	gcloud auth configure-docker
+	docker buildx create --use --name multiarchimage-buildertest
+	for tag in $(IMAGE_TAGS); do \
+                if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
+                        : "creating or overwriting canary image"; \
+                        docker buildx build --push -t $(MULTI_IMAGE_NAME):$$tag --platform=linux/amd64,linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                elif docker pull $(MULTI_IMAGE_NAME):$$tag 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTI_IMAGE_NAME):$$tag not found"; then \
+                        : "creating release image"; \
+                        docker buildx build --push -t $(MULTI_IMAGE_NAME):$$tag --platform=linux/amd64,linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                else \
+                        : "release image $(MULTI_IMAGE_NAME):$$tag already exists, skipping push"; \
+                fi; \
+	done
+	
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
 push: $(CMDS:%=push-%)
+push-multiarch: $(CMDS:%=push-multiarch-%)
 
 clean:
 	-rm -rf bin
