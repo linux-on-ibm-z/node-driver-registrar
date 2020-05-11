@@ -53,7 +53,7 @@ IMAGE_TAGS+=$(shell tagged="$$(git describe --tags --match='v*' --abbrev=0)"; if
 
 # Images are named after the command contained in them.
 IMAGE_NAME=$(REGISTRY_NAME)/$*
-MULTI_IMAGE_NAME=gcr.io/k8s-staging-csi/$*
+MULTIARCH_IMAGE_NAME=gcr.io/k8s-staging-csi/$*
 
 ifdef V
 # Adding "-alsologtostderr" assumes that all test binaries contain glog. This is not guaranteed.
@@ -107,20 +107,32 @@ push-%: container-%
 	done
 
 push-multiarch-%:
+	make BUILD_PLATFORMS="windows amd64 .exe"
 	gcloud auth configure-docker
 	docker buildx create --use --name multiarchimage-buildertest
+	set -ex; \
+	pushMultiArch () { \
+        	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f Dockerfile.multiarch . ;\
+               	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f Dockerfile.multiarch . ;\
+               	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag --platform=windows -f Dockerfile.Windows . ;\
+               	docker manifest create --amend $(MULTIARCH_IMAGE_NAME):$$tag $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag \
+                       $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag \
+                       $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag \
+                       $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag ;\
+		docker manifest push  $(MULTIARCH_IMAGE_NAME):$$tag ;\
+	}; \
 	for tag in $(IMAGE_TAGS); do \
                 if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
                         : "creating or overwriting canary image"; \
-                        docker buildx build --push -t $(MULTI_IMAGE_NAME):$$tag --platform=linux/amd64,linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
-                elif docker pull $(MULTI_IMAGE_NAME):$$tag 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTI_IMAGE_NAME):$$tag not found"; then \
+                       pushMultiArch ;\
+                elif docker pull $(MULTIARCH_IMAGE_NAME):$$tag 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$$tag not found"; then \
                         : "creating release image"; \
-                        docker buildx build --push -t $(MULTI_IMAGE_NAME):$$tag --platform=linux/amd64,linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                       pushMultiArch ;\
                 else \
-                        : "release image $(MULTI_IMAGE_NAME):$$tag already exists, skipping push"; \
+                        : "release image $(MULTIARCH_IMAGE_NAME):$$tag already exists, skipping push"; \
                 fi; \
 	done
-	
+
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
 push: $(CMDS:%=push-%)
