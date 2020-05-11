@@ -125,6 +125,7 @@ push-multiarch-%:
 	}; \
 	if [ $(RELEASE_ALIAS_TAG) = "master" ]; then \
                        : "creating or overwriting canary image"; \
+		       $(RELEASE_ALIAS_TAG)="canary"; \
                        pushMultiArch ;\
 	 elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
                        : "creating release image"; \
