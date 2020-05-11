@@ -119,7 +119,7 @@ push-multiarch-%:
                        $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag \
                        $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag \
                        $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag ;\
-		docker manifest push  $(MULTIARCH_IMAGE_NAME):$$tag ;\
+		docker manifest push -p $(MULTIARCH_IMAGE_NAME):$$tag ;\
 	}; \
 	for tag in $(IMAGE_TAGS); do \
                 if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
