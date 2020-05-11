@@ -127,12 +127,16 @@ push-multiarch-%:
                        : "creating or overwriting canary image"; \
 		       $(RELEASE_ALIAS_TAG)="canary"; \
                        pushMultiArch ;\
-	 elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
+	elif [ echo $(RELEASE_ALIAS_TAG) | grep -q -e 'release-*' ]; then \
+                       : "creating or overwriting canary image"; \
+		       $(RELEASE_ALIAS_TAG)="$(echo $(RELEASE_ALIAS_TAG) | cut -f2 -d '-')-canary"; \
+                       pushMultiArch ;\
+	elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
                        : "creating release image"; \
                        pushMultiArch ;\
-         else \
+  	else \
                        : "release image $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) already exists, skipping push"; \
-         fi; \
+ 	fi; \
 #	for tag in $(IMAGE_TAGS); do \
 #                if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
 #                       : "creating or overwriting canary image"; \
