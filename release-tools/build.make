@@ -109,6 +109,7 @@ push-%: container-%
 RELEASE_ALIAS_TAG=$(PULL_BASE_REF)
 
 push-multiarch-%:
+	export DOCKER_CLI_EXPERIMENTAL=enabled  
 	make BUILD_PLATFORMS="windows amd64 .exe"
 	gcloud auth configure-docker
 	docker buildx create --use --name multiarchimage-buildertest
