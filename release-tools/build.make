@@ -116,7 +116,6 @@ push-multiarch-%:
 	set -ex; \
 	pushMultiArch () { \
                 tag=$$1  ;\
-                echo "Tag is $$tag" ;\
                 docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f Dockerfile.multiarch . ;\
                 docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f Dockerfile.multiarch . ;\
                 docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag --platform=windows -f Dockerfile.Windows . ;\
