@@ -137,17 +137,6 @@ push-multiarch-%:
   	else \
                        : "release image $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) already exists, skipping push"; \
  	fi; \
-#	for tag in $(IMAGE_TAGS); do \
-#                if [ "$$tag" = "canary" ] || echo "$$tag" | grep -q -e '-canary$$'; then \
-#                       : "creating or overwriting canary image"; \
-#                       pushMultiArch ;\
-#                elif docker pull $(MULTIARCH_IMAGE_NAME):$$tag 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$$tag not found"; then \
-#                        : "creating release image"; \
-#                       pushMultiArch ;\
-#                else \
-#                        : "release image $(MULTIARCH_IMAGE_NAME):$$tag already exists, skipping push"; \
-#                fi; \
-#	done
 
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
