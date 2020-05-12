@@ -109,34 +109,35 @@ push-%: container-%
 RELEASE_ALIAS_TAG=$(PULL_BASE_REF)
 
 push-multiarch-%:
-	export DOCKER_CLI_EXPERIMENTAL=enabled  
+	export DOCKER_CLI_EXPERIMENTAL=enabled
 	make BUILD_PLATFORMS="windows amd64 .exe"
 	gcloud auth configure-docker
 	docker buildx create --use --name multiarchimage-buildertest
 	set -ex; \
 	pushMultiArch () { \
-        	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-linux-$(RELEASE_ALIAS_TAG) --platform=linux/amd64 -f Dockerfile.multiarch . ;\
-               	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):s390x-linux-$(RELEASE_ALIAS_TAG) --platform=linux/s390x -f Dockerfile.multiarch . ;\
-               	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-windows-$(RELEASE_ALIAS_TAG) --platform=windows -f Dockerfile.Windows . ;\
-               	docker manifest create --amend $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) $(MULTIARCH_IMAGE_NAME):amd64-linux-$(RELEASE_ALIAS_TAG) \   
-                       $(MULTIARCH_IMAGE_NAME):s390x-linux-$(RELEASE_ALIAS_TAG) \
-                       $(MULTIARCH_IMAGE_NAME):amd64-windows-$(RELEASE_ALIAS_TAG) ;\
-		docker manifest push -p $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) ;\
+                tag=$$1  ;\
+                echo "Tag is $$tag" ;\
+                docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f Dockerfile.multiarch . ;\
+                docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f Dockerfile.multiarch . ;\
+                docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag --platform=windows -f Dockerfile.Windows . ;\
+                docker manifest create --amend $(MULTIARCH_IMAGE_NAME):$$tag $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag \
+                        $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag \
+                        $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag ;\
+                docker manifest push -p $(MULTIARCH_IMAGE_NAME):$$tag ;\
 	}; \
 	if [ $(RELEASE_ALIAS_TAG) = "master" ]; then \
                        : "creating or overwriting canary image"; \
-		       $(RELEASE_ALIAS_TAG)="canary"; \
-                       pushMultiArch ;\
-	elif [ echo $(RELEASE_ALIAS_TAG) | grep -q -e 'release-*' ]; then \
+                       pushMultiArch canary ; \
+	elif echo $(RELEASE_ALIAS_TAG) | grep -q -e 'release-*' ; then \
                        : "creating or overwriting canary image for release branch"; \
-		       $(RELEASE_ALIAS_TAG)="$(echo $(RELEASE_ALIAS_TAG) | cut -f2 -d '-')-canary"; \
-                       pushMultiArch ;\
-	elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
+                        release_canary_tag=$$(echo $(RELEASE_ALIAS_TAG) | cut -f2 -d '-')-canary ; \
+                        pushMultiArch $$release_canary_tag ; \
+ 	elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
                        : "creating release image"; \
-                       pushMultiArch ;\
-  	else \
+                       pushMultiArch $(RELEASE_ALIAS_TAG) ;\
+	else \
                        : "release image $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) already exists, skipping push"; \
- 	fi; \
+	fi; \
 
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
