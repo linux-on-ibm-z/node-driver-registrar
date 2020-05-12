@@ -128,7 +128,7 @@ push-multiarch-%:
 		       $(RELEASE_ALIAS_TAG)="canary"; \
                        pushMultiArch ;\
 	elif [ echo $(RELEASE_ALIAS_TAG) | grep -q -e 'release-*' ]; then \
-                       : "creating or overwriting canary image"; \
+                       : "creating or overwriting canary image for release branch"; \
 		       $(RELEASE_ALIAS_TAG)="$(echo $(RELEASE_ALIAS_TAG) | cut -f2 -d '-')-canary"; \
                        pushMultiArch ;\
 	elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
