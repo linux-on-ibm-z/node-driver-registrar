@@ -117,8 +117,7 @@ push-multiarch-%:
         	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-linux-$(RELEASE_ALIAS_TAG) --platform=linux/amd64 -f Dockerfile.multiarch . ;\
                	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):s390x-linux-$(RELEASE_ALIAS_TAG) --platform=linux/s390x -f Dockerfile.multiarch . ;\
                	docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-windows-$(RELEASE_ALIAS_TAG) --platform=windows -f Dockerfile.Windows . ;\
-               	docker manifest create --amend $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) $(MULTIARCH_IMAGE_NAME):amd64-linux-$(RELEASE_ALIAS_TAG) \
-                       $(MULTIARCH_IMAGE_NAME):amd64-linux-$(RELEASE_ALIAS_TAG) \
+               	docker manifest create --amend $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) $(MULTIARCH_IMAGE_NAME):amd64-linux-$(RELEASE_ALIAS_TAG) \   
                        $(MULTIARCH_IMAGE_NAME):s390x-linux-$(RELEASE_ALIAS_TAG) \
                        $(MULTIARCH_IMAGE_NAME):amd64-windows-$(RELEASE_ALIAS_TAG) ;\
 		docker manifest push -p $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) ;\
