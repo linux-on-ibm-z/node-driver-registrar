@@ -10,7 +10,7 @@ steps:
   - name: 'gcr.io/k8s-testimages/gcb-docker-gcloud:v20200421-a2bf5f8'
     entrypoint: make
     env:
-    - VERSION=$_GIT_TAG
+    - REV=$_GIT_TAG
     - PULL_BASE_REF=$_PULL_BASE_REF
     - HOME=/root
     - REGISTRY_NAME=gcr.io/k8s-staging-csi
