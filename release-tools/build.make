@@ -52,7 +52,6 @@ IMAGE_TAGS+=$(shell tagged="$$(git describe --tags --match='v*' --abbrev=0)"; if
 
 # Images are named after the command contained in them.
 IMAGE_NAME=$(REGISTRY_NAME)/$*
-MULTIARCH_IMAGE_NAME=gcr.io/k8s-staging-csi/$*
 
 ifdef V
 # Adding "-alsologtostderr" assumes that all test binaries contain glog. This is not guaranteed.
@@ -69,9 +68,6 @@ endif
 # semicolon) builds for the default platform of the current Go
 # toolchain.
 BUILD_PLATFORMS =
-
-# To enable experimental features on the Docker daemon
-export DOCKER_CLI_EXPERIMENTAL:=enabled
 
 # This builds each command (= the sub-directories of ./cmd) for the target platform(s)
 # defined by BUILD_PLATFORMS.
@@ -105,36 +101,35 @@ push-%: container-%
 		fi; \
 	done
 
-RELEASE_ALIAS_TAG=$(PULL_BASE_REF)
-
 push-multiarch-%:
-	export DOCKER_CLI_EXPERIMENTAL=enabled
 	make BUILD_PLATFORMS="windows amd64 .exe"
 	gcloud auth configure-docker
-	docker buildx create --use --name multiarchimage-buildertest
 	set -ex; \
+	DOCKER_CLI_EXPERIMENTAL=enabled; \
+	export DOCKER_CLI_EXPERIMENTAL; \
+ 	docker buildx create --use --name multiarchimage-buildertest; \
 	pushMultiArch () { \
-                tag=$$1  ;\
-                docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f Dockerfile.multiarch . ;\
-                docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f Dockerfile.multiarch . ;\
-                docker buildx build --push -t $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag --platform=windows -f Dockerfile.Windows . ;\
-                docker manifest create --amend $(MULTIARCH_IMAGE_NAME):$$tag $(MULTIARCH_IMAGE_NAME):amd64-linux-$$tag \
-                        $(MULTIARCH_IMAGE_NAME):s390x-linux-$$tag \
-                        $(MULTIARCH_IMAGE_NAME):amd64-windows-$$tag ;\
-                docker manifest push -p $(MULTIARCH_IMAGE_NAME):$$tag ;\
+                tag=$$1; \
+                docker buildx build --push -t $(IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f Dockerfile.multiarch .; \
+                docker buildx build --push -t $(IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f Dockerfile.multiarch .; \
+                docker buildx build --push -t $(IMAGE_NAME):amd64-windows-$$tag --platform=windows -f Dockerfile.Windows .; \
+                docker manifest create --amend $(IMAGE_NAME):$$tag $(IMAGE_NAME):amd64-linux-$$tag \
+                        $(IMAGE_NAME):s390x-linux-$$tag \
+                        $(IMAGE_NAME):amd64-windows-$$tag; \
+                docker manifest push -p $(IMAGE_NAME):$$tag; \
 	}; \
-	if [ $(RELEASE_ALIAS_TAG) = "master" ]; then \
+	if [ $(PULL_BASE_REF) = "master" ]; then \
                        : "creating or overwriting canary image"; \
-                       pushMultiArch canary ; \
-	elif echo $(RELEASE_ALIAS_TAG) | grep -q -e 'release-*' ; then \
+                       pushMultiArch canary; \
+	elif echo $(PULL_BASE_REF) | grep -q -e 'release-*' ; then \
                        : "creating or overwriting canary image for release branch"; \
-                        release_canary_tag=$$(echo $(RELEASE_ALIAS_TAG) | cut -f2 -d '-')-canary ; \
-                        pushMultiArch $$release_canary_tag ; \
- 	elif docker pull $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) 2>&1 | tee /dev/stderr | grep -q "manifest for $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) not found"; then \
+                        release_canary_tag=$$(echo $(PULL_BASE_REF) | cut -f2 -d '-')-canary; \
+                        pushMultiArch $$release_canary_tag; \
+ 	elif docker pull $(IMAGE_NAME):$(PULL_BASE_REF) 2>&1 | tee /dev/stderr | grep -q "manifest for $(IMAGE_NAME):$(PULL_BASE_REF) not found"; then \
                        : "creating release image"; \
-                       pushMultiArch $(RELEASE_ALIAS_TAG) ;\
+                       pushMultiArch $(PULL_BASE_REF); \
 	else \
-                       : "release image $(MULTIARCH_IMAGE_NAME):$(RELEASE_ALIAS_TAG) already exists, skipping push"; \
+                       : "release image $(IMAGE_NAME):$(PULL_BASE_REF) already exists, skipping push"; \
 	fi; \
 
 build: $(CMDS:%=build-%)
