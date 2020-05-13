@@ -100,7 +100,6 @@ push-%: container-%
 			: "release image $(IMAGE_NAME):$$tag already exists, skipping push"; \
 		fi; \
 	done
-	
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
 push: $(CMDS:%=push-%)
