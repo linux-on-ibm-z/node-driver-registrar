@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Added push-multiarch to build and push multiarch image
 .PHONY: build-% build container-% container push-% push push-multiarch-% push-multiarch clean test
 
 # A space-separated list of all commands in the repository, must be
