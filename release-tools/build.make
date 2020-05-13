@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: build-% build container-% container push-% push push-multiarch-% push-multiarch clean test
+.PHONY: build-% build container-% container push-% push clean test
 
 # A space-separated list of all commands in the repository, must be
 # set in main Makefile of a repository.
@@ -100,42 +100,10 @@ push-%: container-%
 			: "release image $(IMAGE_NAME):$$tag already exists, skipping push"; \
 		fi; \
 	done
-
-push-multiarch-%:
-	make BUILD_PLATFORMS="windows amd64 .exe"
-	gcloud auth configure-docker
-	set -ex; \
-	DOCKER_CLI_EXPERIMENTAL=enabled; \
-	export DOCKER_CLI_EXPERIMENTAL; \
- 	docker buildx create --use --name multiarchimage-buildertest; \
-	pushMultiArch () { \
-                tag=$$1; \
-                docker buildx build --push -t $(IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) .; \
-                docker buildx build --push -t $(IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) .; \
-                docker buildx build --push -t $(IMAGE_NAME):amd64-windows-$$tag --platform=windows -f $(shell if [ -e ./cmd/$*/Dockerfile.Windows ]; then echo ./cmd/$*/Dockerfile.Windows; else echo Dockerfile.Windows; fi) .; \
-                docker manifest create --amend $(IMAGE_NAME):$$tag $(IMAGE_NAME):amd64-linux-$$tag \
-                        $(IMAGE_NAME):s390x-linux-$$tag \
-                        $(IMAGE_NAME):amd64-windows-$$tag; \
-                docker manifest push -p $(IMAGE_NAME):$$tag; \
-	}; \
-	if [ $(PULL_BASE_REF) = "master" ]; then \
-                       : "creating or overwriting canary image"; \
-                       pushMultiArch canary; \
-	elif echo $(PULL_BASE_REF) | grep -q -e 'release-*' ; then \
-                       : "creating or overwriting canary image for release branch"; \
-                        release_canary_tag=$$(echo $(PULL_BASE_REF) | cut -f2 -d '-')-canary; \
-                        pushMultiArch $$release_canary_tag; \
- 	elif docker pull $(IMAGE_NAME):$(PULL_BASE_REF) 2>&1 | tee /dev/stderr | grep -q "manifest for $(IMAGE_NAME):$(PULL_BASE_REF) not found"; then \
-                       : "creating release image"; \
-                       pushMultiArch $(PULL_BASE_REF); \
-	else \
-                       : "release image $(IMAGE_NAME):$(PULL_BASE_REF) already exists, skipping push"; \
-	fi; \
 	
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
 push: $(CMDS:%=push-%)
-push-multiarch: $(CMDS:%=push-multiarch-%)
 
 clean:
 	-rm -rf bin
