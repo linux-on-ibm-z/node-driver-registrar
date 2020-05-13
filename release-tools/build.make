@@ -110,9 +110,9 @@ push-multiarch-%:
  	docker buildx create --use --name multiarchimage-buildertest; \
 	pushMultiArch () { \
                 tag=$$1; \
-                docker buildx build --push -t $(IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f Dockerfile.multiarch .; \
-                docker buildx build --push -t $(IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f Dockerfile.multiarch .; \
-                docker buildx build --push -t $(IMAGE_NAME):amd64-windows-$$tag --platform=windows -f Dockerfile.Windows .; \
+                docker buildx build --push -t $(IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) .; \
+                docker buildx build --push -t $(IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) .; \
+                docker buildx build --push -t $(IMAGE_NAME):amd64-windows-$$tag --platform=windows -f $(shell if [ -e ./cmd/$*/Dockerfile.Windows ]; then echo ./cmd/$*/Dockerfile.Windows; else echo Dockerfile.Windows; fi) .; \
                 docker manifest create --amend $(IMAGE_NAME):$$tag $(IMAGE_NAME):amd64-linux-$$tag \
                         $(IMAGE_NAME):s390x-linux-$$tag \
                         $(IMAGE_NAME):amd64-windows-$$tag; \
@@ -131,7 +131,7 @@ push-multiarch-%:
 	else \
                        : "release image $(IMAGE_NAME):$(PULL_BASE_REF) already exists, skipping push"; \
 	fi; \
-
+	
 build: $(CMDS:%=build-%)
 container: $(CMDS:%=container-%)
 push: $(CMDS:%=push-%)
