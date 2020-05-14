@@ -28,7 +28,7 @@ push-multiarch-%:
 	make BUILD_PLATFORMS="windows amd64 .exe"
 	gcloud auth configure-docker
 	set -ex; \
-	label_rev=v$$(echo $(REV) | cut -f3 -d 'v'); \
+	label_rev=v$$(echo $(REV) | cut -f3- -d 'v'); \
 	DOCKER_CLI_EXPERIMENTAL=enabled; \
 	export DOCKER_CLI_EXPERIMENTAL; \
 	docker buildx create --use --name multiarchimage-buildertest; \
