@@ -23,3 +23,4 @@ substitutions:
   # _PULL_BASE_REF will contain the ref that was pushed to trigger this build -
   # a branch like 'master' or 'release-0.2', or a tag like 'v0.2'.
   _PULL_BASE_REF: 'master'
+  _STAGING_PROJECT: 'k8s-staging-csi'
