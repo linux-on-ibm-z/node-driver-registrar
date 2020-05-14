@@ -19,11 +19,11 @@ all: build
 
 include release-tools/build.make
 
-# Use docker buildx to build and push multiarch docker image
-# Images are getting tagged as below depending upon PULL_BASE_REF values
-# 1. canary (for master branch)
-# 2. <release_branch>-canary (for release branch) 
-# 3. vX.Y.Z (tagged version). 
+# This target added to build multiarch images using Moby BuildKit builder toolkit.
+# Docker Buildx is included in Docker 19.03 and needs DOCKER_CLI_EXPERIMENTAL enabled
+# to run those commands.
+# Currently amd, s390x and Windows manifest is pushed for canary, release branch and released tags.
+# Images generated from Prow build are pushed to staging area in gcr
 push-multiarch-%:
 	make BUILD_PLATFORMS="windows amd64 .exe"
 	set -ex; \
