@@ -27,15 +27,14 @@ push-multiarch-%:
 	make BUILD_PLATFORMS="windows amd64 .exe"
 	set -ex; \
 	gcloud auth configure-docker; \
-	label_rev=v$$(echo $(REV) | cut -f3- -d 'v'); \
 	DOCKER_CLI_EXPERIMENTAL=enabled; \
 	export DOCKER_CLI_EXPERIMENTAL; \
 	docker buildx create --use --name multiarchimage-buildertest; \
 	pushMultiArch () { \
                 tag=$$1; \
-                docker buildx build --push -t $(IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$$label_rev .; \
-                docker buildx build --push -t $(IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$$label_rev .; \
-                docker buildx build --push -t $(IMAGE_NAME):amd64-windows-$$tag --platform=windows -f $(shell if [ -e ./cmd/$*/Dockerfile.Windows ]; then echo ./cmd/$*/Dockerfile.Windows; else echo Dockerfile.Windows; fi) --label revision=$$label_rev .; \
+                docker buildx build --push -t $(IMAGE_NAME):amd64-linux-$$tag --platform=linux/amd64 -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                docker buildx build --push -t $(IMAGE_NAME):s390x-linux-$$tag --platform=linux/s390x -f $(shell if [ -e ./cmd/$*/Dockerfile.multiarch ]; then echo ./cmd/$*/Dockerfile.multiarch; else echo Dockerfile.multiarch; fi) --label revision=$(REV) .; \
+                docker buildx build --push -t $(IMAGE_NAME):amd64-windows-$$tag --platform=windows -f $(shell if [ -e ./cmd/$*/Dockerfile.Windows ]; then echo ./cmd/$*/Dockerfile.Windows; else echo Dockerfile.Windows; fi) --label revision=$(REV) .; \
                 docker manifest create --amend $(IMAGE_NAME):$$tag $(IMAGE_NAME):amd64-linux-$$tag \
                         $(IMAGE_NAME):s390x-linux-$$tag \
                         $(IMAGE_NAME):amd64-windows-$$tag; \
