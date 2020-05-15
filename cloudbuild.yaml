@@ -11,7 +11,7 @@ steps:
     entrypoint: make
     env:
     # Extract tag-n-hash value from _GIT_TAG(form vYYYYMMDD-tag-n-hash)
-    - REV=v$(echo $(_GIT_TAG) | cut -f3- -d 'v')
+    - REV=v$(echo $_GIT_TAG | cut -f3- -d 'v')
     - PULL_BASE_REF=$_PULL_BASE_REF
     - HOME=/root
     - REGISTRY_NAME=gcr.io/k8s-staging-csi
