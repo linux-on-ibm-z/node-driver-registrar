@@ -19,11 +19,6 @@ all: build
 
 include release-tools/build.make
 
-# Override registry, revision and Images
-REV=$(REV_CI)
-REGISTRY_NAME=$(REGISTRY_CI)
-IMAGE_NAME=$(REGISTRY_NAME)/$*
-
 # This target builds multiarch images using Moby BuildKit builder toolkit.
 # Docker Buildx is included in Docker 19.03 and needs DOCKER_CLI_EXPERIMENTAL enabled to run corresponding commands.
 # Currently amd, s390x and Windows manifest is pushed for canary, release branch and released tags.
