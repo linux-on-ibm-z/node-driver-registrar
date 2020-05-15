@@ -10,12 +10,13 @@ steps:
   - name: 'gcr.io/k8s-testimages/gcb-docker-gcloud:v20200421-a2bf5f8'
     entrypoint: make
     env:
-    - REV_CI=$_GIT_TAG
+    # Extract tag-n-hash value from _GIT_TAG(form vYYYYMMDD-tag-n-hash)
+    - REV=v$(echo $(_GIT_TAG) | cut -f3- -d 'v')
     - PULL_BASE_REF=$_PULL_BASE_REF
     - HOME=/root
-    - REGISTRY_CI=gcr.io/k8s-staging-csi
+    - REGISTRY_NAME=gcr.io/k8s-staging-csi
     args:
-    - push-multiarch
+    - push-multiarch REV=$REV REGISTRY_NAME=$REGISTRY_NAME
 substitutions:
   # _GIT_TAG will be filled with a git-based tag for the image, of the form vYYYYMMDD-hash, and
   # can be used as a substitution
